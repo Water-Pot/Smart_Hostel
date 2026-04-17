@@ -22,12 +22,20 @@ type Menu = {
   menuItems?: MenuItem[];
 };
 
+type LoginResponse = string | { token?: string };
+
 const TOKEN_KEY = "smart_hostel_token";
 
 export default function Home() {
   const [token, setToken] = useState(() => {
     if (typeof window === "undefined") return "";
-    return localStorage.getItem(TOKEN_KEY) ?? "";
+    const savedToken = localStorage.getItem(TOKEN_KEY) ?? "";
+    if (!savedToken) return "";
+    if (isTokenExpired(savedToken)) {
+      localStorage.removeItem(TOKEN_KEY);
+      return "";
+    }
+    return savedToken;
   });
   const [status, setStatus] = useState("Welcome! Connect your backend account to start.");
   const [busy, setBusy] = useState(false);
@@ -74,6 +82,12 @@ export default function Home() {
 
   const loadDashboard = useCallback(async (activeToken: string) => {
     if (!activeToken) return;
+    if (isTokenExpired(activeToken)) {
+      localStorage.removeItem(TOKEN_KEY);
+      setToken("");
+      setStatus("Session expired. Please login again.");
+      return;
+    }
 
     try {
       setBusy(true);
@@ -140,12 +154,18 @@ export default function Home() {
     event.preventDefault();
     try {
       setBusy(true);
-      const response = await apiRequest<string>("/user/login", {
+      const response = await apiRequest<LoginResponse>("/user/login", {
         method: "POST",
         body: loginForm,
       });
 
-      const tokenValue = String(response).replace(/^"|"$/g, "").trim();
+      const tokenValue = extractToken(response);
+      if (!tokenValue) {
+        throw new Error("Login succeeded but token was missing in response.");
+      }
+      if (isTokenExpired(tokenValue)) {
+        throw new Error("Received an expired token. Please try logging in again.");
+      }
       setToken(tokenValue);
       localStorage.setItem(TOKEN_KEY, tokenValue);
       setStatus("Login successful.");
@@ -492,8 +512,8 @@ export default function Home() {
                       </td>
                     </tr>
                   ) : (
-                    rooms.map((room, idx) => (
-                      <tr key={`${room.roomId ?? idx}-${room.roomNo}`} className="border-b border-white/5">
+                    rooms.map((room) => (
+                      <tr key={getRoomKey(room)} className="border-b border-white/5">
                         <td className="px-3 py-2">{room.roomNo ?? "-"}</td>
                         <td className="px-3 py-2">{room.roomType?.roomType ?? "-"}</td>
                         <td className="px-3 py-2">{room.floor?.floorNo ?? "-"}</td>
@@ -655,14 +675,23 @@ function ActionButton({
 }
 
 function SimpleList({ items, emptyLabel }: { items: string[]; emptyLabel: string }) {
+  const keyedItems = useMemo(() => {
+    const occurrenceByItem = new Map<string, number>();
+    return items.map((item) => {
+      const occurrence = (occurrenceByItem.get(item) ?? 0) + 1;
+      occurrenceByItem.set(item, occurrence);
+      return { key: `${item}-${occurrence}`, label: item };
+    });
+  }, [items]);
+
   return (
     <ul className="max-h-52 space-y-2 overflow-auto rounded-xl border border-white/10 bg-slate-900/60 p-3">
       {items.length === 0 ? (
         <li className="text-sm text-slate-400">{emptyLabel}</li>
       ) : (
-        items.map((item, idx) => (
-          <li key={`${item}-${idx}`} className="rounded-lg bg-white/5 px-3 py-2 text-sm">
-            {item}
+        keyedItems.map((item) => (
+          <li key={item.key} className="rounded-lg bg-white/5 px-3 py-2 text-sm">
+            {item.label}
           </li>
         ))
       )}
@@ -687,4 +716,33 @@ function InputField({
       className={`rounded-xl border border-white/20 bg-slate-900 px-3 py-2 text-sm outline-none focus:border-cyan-300 ${className}`.trim()}
     />
   );
+}
+
+function extractToken(response: LoginResponse): string {
+  if (typeof response === "string") {
+    return response.replace(/^"|"$/g, "").trim();
+  }
+
+  return (response.token ?? "").trim();
+}
+
+function getRoomKey(room: Room): string {
+  if (room.roomId !== undefined) return `room-id-${room.roomId}`;
+  if (room.roomNo !== undefined) return `room-no-${room.roomNo}`;
+
+  return `room-${room.floor?.floorNo ?? "x"}-${room.roomType?.roomType ?? "x"}-${room.perDayRentFee ?? "x"}`;
+}
+
+function isTokenExpired(token: string): boolean {
+  try {
+    const payloadPart = token.split(".")[1];
+    if (!payloadPart) return true;
+    const payload = JSON.parse(atob(payloadPart.replace(/-/g, "+").replace(/_/g, "/"))) as {
+      exp?: number;
+    };
+    if (!payload.exp) return false;
+    return payload.exp * 1000 <= Date.now();
+  } catch {
+    return true;
+  }
 }
