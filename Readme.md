@@ -111,3 +111,19 @@ Testing the backend authentication flow via Postman.
 </p>
 
 
+---
+
+## 🌐 Frontend (Next.js)
+
+A new Next.js frontend is available in `/frontend` with a modern dashboard UI connected to this backend.
+
+### Run Frontend
+
+```bash
+cd frontend
+cp .env.example .env.local
+npm install
+npm run dev
+```
+
+By default it proxies API calls to `http://localhost:8000` using `/backend/*` rewrite.
