@@ -15,8 +15,8 @@ export default function RootLayout({
   return (
     <html lang="en" className="h-full antialiased">
       <body className="min-h-full">
-        <div className="mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 py-6 sm:px-8 lg:flex-row lg:items-start">
-          <Navigation />
+        <Navigation />
+        <div className="mx-auto w-full max-w-7xl px-4 py-6 sm:px-8">
           <main className="w-full">{children}</main>
         </div>
       </body>
