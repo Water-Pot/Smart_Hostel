@@ -1,61 +1,37 @@
 import Link from "next/link";
-import { ENDPOINTS } from "@/lib/endpoints";
 import { Card } from "@/components/ui";
 
 export default function HomePage() {
-  const publicCount = ENDPOINTS.filter((endpoint) => endpoint.isPublic).length;
-  const secureCount = ENDPOINTS.length - publicCount;
-  const categories = Array.from(new Set(ENDPOINTS.map((endpoint) => endpoint.category)));
-
-  const stats = [
-    { title: "Total Endpoints", value: ENDPOINTS.length },
-    { title: "Public Endpoints", value: publicCount },
-    { title: "Secured Endpoints", value: secureCount },
-    { title: "Categories", value: categories.length },
-  ];
-
   return (
     <div className="grid gap-6">
       <section className="rounded-3xl border border-white/10 bg-gradient-to-br from-fuchsia-600/30 via-sky-500/30 to-emerald-500/30 p-6">
         <p className="mb-2 text-xs uppercase tracking-[0.2em] text-cyan-100">Smart Hostel</p>
-        <h1 className="text-3xl font-bold text-white sm:text-4xl">Beautiful Multi-Page API Frontend</h1>
+        <h1 className="text-3xl font-bold text-white sm:text-4xl">Simple & Modern Student Portal</h1>
         <p className="mt-3 max-w-3xl text-sm text-slate-200 sm:text-base">
-          Now each feature is split into dedicated pages. Use the left menu to move page by page and
-          run every backend function with cleaner workflow.
+          Clean frontend connected to your backend with a clear flow: create account, login, then upload profile image.
         </p>
         <div className="mt-5 flex flex-wrap gap-3">
-          <QuickLink href="/auth" label="Start with Auth" />
-          <QuickLink href="/explorer" label="Open API Explorer" />
-          <QuickLink href="/upload" label="Go to Image Upload" />
+          <QuickLink href="/signup" label="Sign Up" />
+          <QuickLink href="/login" label="Login" />
+          <QuickLink href="/profile" label="Profile" />
         </div>
       </section>
 
-      <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        {stats.map((stat) => (
-          <Card key={stat.title} title={stat.title}>
-            <p className="text-4xl font-bold text-white">{stat.value}</p>
-          </Card>
-        ))}
-      </section>
-
       <section className="grid gap-4 lg:grid-cols-2">
-        <Card title="Page Flow" subtitle="Use this sequence for best result">
+        <Card title="How to Use" subtitle="Fast onboarding flow">
           <ol className="list-decimal space-y-2 pl-5 text-sm text-slate-200">
-            <li>Create account / login in <strong>Auth</strong> page.</li>
-            <li>Upload image in <strong>Image Upload</strong> page.</li>
-            <li>Run all API methods in <strong>API Explorer</strong> page.</li>
-            <li>Review latest backend output in <strong>Response</strong> page.</li>
+            <li>Create account in Sign Up page.</li>
+            <li>Login with your username and password.</li>
+            <li>Open Profile page and upload your image.</li>
           </ol>
         </Card>
 
-        <Card title="Backend Coverage" subtitle="All methods are connected">
-          <div className="flex flex-wrap gap-2">
-            {categories.map((category) => (
-              <span key={category} className="rounded-full border border-white/20 px-3 py-1 text-xs text-slate-200">
-                {category}
-              </span>
-            ))}
-          </div>
+        <Card title="Design Focus" subtitle="User-friendly UI">
+          <ul className="list-disc space-y-2 pl-5 text-sm text-slate-200">
+            <li>Separate authentication pages</li>
+            <li>Clean navigation without backend method noise</li>
+            <li>Profile upload shown after sign-in</li>
+          </ul>
         </Card>
       </section>
     </div>

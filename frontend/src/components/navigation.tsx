@@ -4,11 +4,10 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 const ITEMS = [
-  { href: "/", label: "Dashboard" },
-  { href: "/auth", label: "Auth" },
-  { href: "/upload", label: "Image Upload" },
-  { href: "/explorer", label: "API Explorer" },
-  { href: "/response", label: "Response" },
+  { href: "/", label: "Home" },
+  { href: "/signup", label: "Sign Up" },
+  { href: "/login", label: "Login" },
+  { href: "/profile", label: "Profile" },
 ];
 
 export function Navigation() {
