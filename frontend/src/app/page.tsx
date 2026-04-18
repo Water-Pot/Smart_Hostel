@@ -1,6 +1,6 @@
 "use client";
 
-import { ChangeEvent, FormEvent, useEffect, useMemo, useState } from "react";
+import { ChangeEvent, FormEvent, useMemo, useState } from "react";
 import { apiRequest } from "@/lib/api";
 
 type HttpMethod = "GET" | "POST" | "PUT" | "DELETE";
@@ -529,7 +529,14 @@ const ENDPOINTS: EndpointDefinition[] = [
 ];
 
 export default function Home() {
-  const [token, setToken] = useState("");
+  const initialEndpoint = ENDPOINTS[0];
+
+  const [token, setToken] = useState(() => {
+    if (typeof window === "undefined") return "";
+    const saved = localStorage.getItem(TOKEN_KEY) ?? "";
+    if (!saved || isTokenExpired(saved)) return "";
+    return saved;
+  });
   const [busy, setBusy] = useState(false);
   const [status, setStatus] = useState("Ready. Use signup/login first for secured endpoints.");
   const [responseText, setResponseText] = useState("No response yet.");
@@ -544,33 +551,22 @@ export default function Home() {
 
   const [category, setCategory] = useState("All");
   const [search, setSearch] = useState("");
-  const [selectedEndpointId, setSelectedEndpointId] = useState(ENDPOINTS[0]?.id ?? "");
+  const [selectedEndpointId, setSelectedEndpointId] = useState(initialEndpoint?.id ?? "");
 
-  const [pathParams, setPathParams] = useState<Record<string, string>>({});
-  const [queryParams, setQueryParams] = useState<Record<string, string>>({});
-  const [bodyText, setBodyText] = useState("");
+  const [pathParams, setPathParams] = useState<Record<string, string>>({
+    ...(initialEndpoint?.defaultPathParams ?? {}),
+  });
+  const [queryParams, setQueryParams] = useState<Record<string, string>>({
+    ...(initialEndpoint?.defaultQueryParams ?? {}),
+  });
+  const [bodyText, setBodyText] = useState(
+    initialEndpoint?.bodyTemplate === undefined
+      ? ""
+      : JSON.stringify(initialEndpoint.bodyTemplate, null, 2),
+  );
 
   const selectedEndpoint =
     ENDPOINTS.find((endpoint) => endpoint.id === selectedEndpointId) ?? ENDPOINTS[0];
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    const saved = localStorage.getItem(TOKEN_KEY) ?? "";
-    if (saved && !isTokenExpired(saved)) {
-      setToken(saved);
-    }
-  }, []);
-
-  useEffect(() => {
-    if (!selectedEndpoint) return;
-    setPathParams({ ...(selectedEndpoint.defaultPathParams ?? {}) });
-    setQueryParams({ ...(selectedEndpoint.defaultQueryParams ?? {}) });
-    setBodyText(
-      selectedEndpoint.bodyTemplate === undefined
-        ? ""
-        : JSON.stringify(selectedEndpoint.bodyTemplate, null, 2),
-    );
-  }, [selectedEndpoint]);
 
   const categories = useMemo(() => {
     const unique = new Set(ENDPOINTS.map((endpoint) => endpoint.category));
@@ -606,6 +602,15 @@ export default function Home() {
 
   function updateQueryParam(key: string, value: string) {
     setQueryParams((prev) => ({ ...prev, [key]: value }));
+  }
+
+  function applyEndpointSelection(endpoint: EndpointDefinition) {
+    setSelectedEndpointId(endpoint.id);
+    setPathParams({ ...(endpoint.defaultPathParams ?? {}) });
+    setQueryParams({ ...(endpoint.defaultQueryParams ?? {}) });
+    setBodyText(
+      endpoint.bodyTemplate === undefined ? "" : JSON.stringify(endpoint.bodyTemplate, null, 2),
+    );
   }
 
   async function handleSignup(event: FormEvent<HTMLFormElement>) {
@@ -944,7 +949,7 @@ export default function Home() {
                   <button
                     key={endpoint.id}
                     type="button"
-                    onClick={() => setSelectedEndpointId(endpoint.id)}
+                    onClick={() => applyEndpointSelection(endpoint)}
                     className={`rounded-2xl border p-4 text-left transition ${
                       active
                         ? "border-cyan-300 bg-cyan-400/15"
