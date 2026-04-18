@@ -48,7 +48,7 @@ export default function HomePage() {
           </ul>
         </Card>
 
-        <Card title="Navigation Focus" subtitle="Good looking and user friendly">
+        <Card title="Navigation Focus" subtitle="Good-looking and user-friendly">
           <ul className="list-disc space-y-2 pl-5 text-sm text-slate-200">
             <li>Top navigation bar with clear labels</li>
             <li>Feature grouping page for backend modules</li>
