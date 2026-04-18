@@ -38,6 +38,11 @@ export default function ExplorerPage() {
                 </li>
               ))}
             </ul>
+            {endpoints.length > MAX_DISPLAYED_ENDPOINTS ? (
+              <p className="mt-3 text-xs text-slate-400">
+                ... and {endpoints.length - MAX_DISPLAYED_ENDPOINTS} more backend actions in this module.
+              </p>
+            ) : null}
           </Card>
         ))}
       </section>
