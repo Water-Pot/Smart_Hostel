@@ -27,7 +27,7 @@ export function Navigation() {
         </div>
         <nav className="flex flex-wrap gap-2">
         {ITEMS.map((item) => {
-          const active = pathname === item.href || (item.href !== "/" && pathname.startsWith(item.href));
+          const active = pathname === item.href || (item.href !== "/" && pathname.startsWith(`${item.href}/`));
           return (
             <Link
               key={item.href}
