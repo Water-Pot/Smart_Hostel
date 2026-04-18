@@ -24,7 +24,7 @@ type AuthForm = {
 };
 
 type SignupForm = AuthForm & {
-  rolesCsv: string;
+  roleCsv: string;
 };
 
 type UploadForm = {
@@ -534,7 +534,11 @@ export default function Home() {
   const [token, setToken] = useState(() => {
     if (typeof window === "undefined") return "";
     const saved = localStorage.getItem(TOKEN_KEY) ?? "";
-    if (!saved || isTokenExpired(saved)) return "";
+    if (!saved) return "";
+    if (isTokenExpired(saved)) {
+      localStorage.removeItem(TOKEN_KEY);
+      return "";
+    }
     return saved;
   });
   const [busy, setBusy] = useState(false);
@@ -544,7 +548,7 @@ export default function Home() {
   const [signupForm, setSignupForm] = useState<SignupForm>({
     userName: "",
     password: "",
-    rolesCsv: "tenant",
+    roleCsv: "tenant",
   });
   const [loginForm, setLoginForm] = useState<AuthForm>({ userName: "", password: "" });
   const [uploadForm, setUploadForm] = useState<UploadForm>({ userId: "1", file: null });
@@ -616,12 +620,12 @@ export default function Home() {
   async function handleSignup(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
-    const roleList = signupForm.rolesCsv
+    const roleNames = signupForm.roleCsv
       .split(",")
       .map((role) => role.trim())
       .filter(Boolean);
 
-    if (roleList.length === 0) {
+    if (roleNames.length === 0) {
       setStatus("Enter at least one role.");
       return;
     }
@@ -633,12 +637,12 @@ export default function Home() {
         body: {
           userName: signupForm.userName,
           password: signupForm.password,
-          role: roleList,
+          role: roleNames,
         },
       });
       setResponseText(toPrettyResponse(result));
       setStatus("Signup successful.");
-      setSignupForm({ userName: "", password: "", rolesCsv: "tenant" });
+      setSignupForm({ userName: "", password: "", roleCsv: "tenant" });
     } catch (error) {
       setStatus(getErrorMessage(error));
     } finally {
@@ -686,28 +690,39 @@ export default function Home() {
     setStatus("Logged out.");
   }
 
-  function resolvePath(template: string): string {
-    const withParams = template.replace(/\{([^}]+)\}/g, (_, key: string) => {
-      const value = pathParams[key] ?? "";
-      return encodeURIComponent(value.trim());
-    });
+  function resolvePath(
+    template: string,
+    nextPathParams: Record<string, string>,
+    nextQueryParams: Record<string, string>,
+  ): { path: string; missingParam: string | null } {
+    const requiredPathParamKeys = Array.from(template.matchAll(/\{([^}]+)\}/g)).map(
+      (match) => match[1],
+    );
+    const missingParam = requiredPathParamKeys.find((key) => !(nextPathParams[key] ?? "").trim());
+    if (missingParam) {
+      return { path: template, missingParam };
+    }
+
+    const withParams = template.replace(/\{([^}]+)\}/g, (_, key: string) =>
+      encodeURIComponent((nextPathParams[key] ?? "").trim()),
+    );
 
     const query = new URLSearchParams();
-    for (const [key, value] of Object.entries(queryParams)) {
+    for (const [key, value] of Object.entries(nextQueryParams)) {
       if (value.trim()) {
         query.set(key, value.trim());
       }
     }
 
     const queryString = query.toString();
-    return queryString ? `${withParams}?${queryString}` : withParams;
+    return { path: queryString ? `${withParams}?${queryString}` : withParams, missingParam: null };
   }
 
   async function runSelectedEndpoint() {
     if (!selectedEndpoint) return;
 
     if (selectedEndpoint.contentType === "multipart/form-data") {
-      setStatus("Use the Upload User Image panel for this multipart endpoint.");
+      setStatus("This endpoint requires multipart form data. Use the upload form above.");
       return;
     }
 
@@ -716,9 +731,9 @@ export default function Home() {
       return;
     }
 
-    const missingPathParam = Object.entries(pathParams).find(([, value]) => !value.trim());
-    if (missingPathParam) {
-      setStatus(`Path parameter '${missingPathParam[0]}' is required.`);
+    const resolved = resolvePath(selectedEndpoint.path, pathParams, queryParams);
+    if (resolved.missingParam) {
+      setStatus(`Path parameter '${resolved.missingParam}' is required.`);
       return;
     }
 
@@ -736,14 +751,13 @@ export default function Home() {
 
     try {
       setBusy(true);
-      const path = resolvePath(selectedEndpoint.path);
-      const result = await apiRequest<unknown>(path, {
+      const result = await apiRequest<unknown>(resolved.path, {
         method: selectedEndpoint.method,
         token: selectedEndpoint.isPublic ? undefined : token,
         body: parsedBody,
       });
       setResponseText(toPrettyResponse(result));
-      setStatus(`${selectedEndpoint.method} ${path} executed successfully.`);
+      setStatus(`${selectedEndpoint.method} ${resolved.path} executed successfully.`);
     } catch (error) {
       setStatus(getErrorMessage(error));
       setResponseText("Request failed. Check status message.");
@@ -801,6 +815,9 @@ export default function Home() {
 
   const pathParamKeys = Object.keys(pathParams);
   const queryParamKeys = Object.keys(queryParams);
+  const resolvedPathPreview = selectedEndpoint
+    ? resolvePath(selectedEndpoint.path, pathParams, queryParams)
+    : { path: "", missingParam: null as string | null };
 
   return (
     <main className="min-h-screen bg-slate-950 text-slate-100">
@@ -876,8 +893,8 @@ export default function Home() {
               <Input
                 required
                 placeholder="Roles (comma separated)"
-                value={signupForm.rolesCsv}
-                onChange={(value) => setSignupForm((prev) => ({ ...prev, rolesCsv: value }))}
+                value={signupForm.roleCsv}
+                onChange={(value) => setSignupForm((prev) => ({ ...prev, roleCsv: value }))}
               />
               <PrimaryButton disabled={busy}>Sign Up</PrimaryButton>
             </form>
@@ -1061,7 +1078,11 @@ export default function Home() {
 
                 <div className="mt-4 rounded-xl border border-white/10 bg-slate-900/80 p-3">
                   <p className="mb-2 text-xs uppercase tracking-wider text-slate-400">Resolved Path</p>
-                  <p className="break-all text-sm text-cyan-200">{resolvePath(selectedEndpoint.path)}</p>
+                  <p className="break-all text-sm text-cyan-200">
+                    {resolvedPathPreview.missingParam
+                      ? `Missing path parameter: ${resolvedPathPreview.missingParam}`
+                      : resolvedPathPreview.path}
+                  </p>
                 </div>
               </>
             ) : (
@@ -1152,21 +1173,21 @@ function extractToken(response: unknown): string {
     return response.replace(/^"|"$/g, "").trim();
   }
 
-  if (response && typeof response === "object" && "token" in response) {
-    const token = (response as { token?: unknown }).token;
-    return typeof token === "string" ? token.trim() : "";
+  if (hasTokenField(response)) {
+    return typeof response.token === "string" ? response.token.trim() : "";
   }
 
   return "";
 }
 
+function hasTokenField(value: unknown): value is { token?: unknown } {
+  return typeof value === "object" && value !== null && "token" in value;
+}
+
 function toPrettyResponse(value: unknown): string {
   if (typeof value === "string") {
-    try {
-      return JSON.stringify(JSON.parse(value), null, 2);
-    } catch {
-      return value;
-    }
+    const parsed = tryParseJson(value);
+    return parsed === undefined ? value : JSON.stringify(parsed, null, 2);
   }
 
   if (value === undefined) {
@@ -1177,6 +1198,14 @@ function toPrettyResponse(value: unknown): string {
     return JSON.stringify(value, null, 2);
   } catch {
     return String(value);
+  }
+}
+
+function tryParseJson(value: string): unknown | undefined {
+  try {
+    return JSON.parse(value);
+  } catch {
+    return undefined;
   }
 }
 
