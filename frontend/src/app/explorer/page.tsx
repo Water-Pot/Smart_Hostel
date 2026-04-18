@@ -1,6 +1,8 @@
 import { Card } from "@/components/ui";
 import { ENDPOINTS } from "@/lib/endpoints";
 
+const MAX_DISPLAYED_ENDPOINTS = 8;
+
 export default function ExplorerPage() {
   const groups = ENDPOINTS.reduce<Record<string, typeof ENDPOINTS>>((acc, endpoint) => {
     if (!acc[endpoint.category]) {
@@ -27,7 +29,7 @@ export default function ExplorerPage() {
         {categories.map(([category, endpoints]) => (
           <Card key={category} title={category} subtitle={`${endpoints.length} available actions`}>
             <ul className="space-y-2 text-sm text-slate-200">
-              {endpoints.slice(0, 8).map((endpoint) => (
+              {endpoints.slice(0, MAX_DISPLAYED_ENDPOINTS).map((endpoint) => (
                 <li key={endpoint.id} className="rounded-lg border border-white/10 bg-slate-900/50 px-3 py-2">
                   <p className="font-medium text-white">{endpoint.title}</p>
                   <p className="text-xs text-slate-300">
