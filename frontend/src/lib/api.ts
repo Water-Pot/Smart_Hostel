@@ -28,7 +28,9 @@ export async function apiRequest<T = unknown>(
 
   let payload: BodyInit | undefined;
 
-  if (body !== undefined) {
+  if (body instanceof FormData) {
+    payload = body;
+  } else if (body !== undefined) {
     headers["Content-Type"] = "application/json";
     payload = JSON.stringify(body);
   }

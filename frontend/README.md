@@ -5,9 +5,11 @@ A modern Next.js dashboard UI for the Smart Hostel Spring Boot backend.
 ## Features
 
 - Beautiful responsive admin-style interface
-- User signup + login (JWT)
-- Live dashboard cards for roles, floors, rooms, and menus
-- Create actions for role, floor, room, meal type, menu item, and menu
+- Complete endpoint catalog (all backend methods included)
+- Interactive API workstation (path params, query params, JSON body editor)
+- User signup + login (JWT) with token persistence
+- Multipart profile image upload support
+- Response viewer with formatted output
 - Backend proxy rewrite (`/backend/*`) to reduce browser CORS issues during development
 
 ## Setup
